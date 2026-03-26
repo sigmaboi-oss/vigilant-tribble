@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    /* 🛑 THE WHITE BOX KILLER */
+    * { box-sizing: border-box; }
+    
+    html, body {
+        background: transparent !important; /* Force the area outside the container to be invisible */
+        margin: 0;
+        padding: 40px; /* Space for the massive outer glow to show up */
+        width: 100%;
+        overflow: hidden;
+        font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+    }
+
+    /* 🔥 THE MAIN INFERNO CONTAINER */
+    #mainContainer {
+        border: 1px solid #ff3c00;
+        border-radius: 20px;
+        /* YOUR SPECIFIC INFERNO GRADIENT */
+        background: radial-gradient(circle at top left,rgba(255,80,0,0.4),transparent 70%),
+                    radial-gradient(circle at bottom right,rgba(255,120,0,0.4),transparent 70%),
+                    rgba(15,0,0,0.95);
+        color: #ffffff;
+        max-width: 320px;
+        margin: 0 auto;
+        text-align: center;
+        /* YOUR SPECIFIC SHADOW SETTINGS */
+        box-shadow: 0 0 40px #ff3c00,
+                    0 0 90px rgba(255,60,0,0.9),
+                    0 0 140px rgba(255,120,0,0.7),
+                    inset 0 0 60px rgba(255,100,0,0.3);
+        transition: all 0.4s ease-in-out;
+        overflow: hidden;
+    }
+
+    #mainContainer:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 60px #ff3c00, 0 0 120px rgba(255,60,0,1);
+    }
+
+    .header {
+        padding: 15px;
+        background: rgba(0,0,0,0.5);
+        border-bottom: 1px solid rgba(255,60,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .live-dot {
+        width: 10px; height: 10px;
+        background: #ff3c00;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #ff3c00;
+        animation: livePulse 1.5s infinite;
+    }
+
+    @keyframes livePulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.4); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .title-text {
+        color: #fff3d1;
+        font-family: 'Times New Roman', serif;
+        font-size: 18px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-weight: bold;
+        text-shadow: 0 0 3px #ff3c00, 0 0 12px #ff6a00;
+    }
+
+    #scrollBox::-webkit-scrollbar { display: none !important; }
+    #scrollBox {
+        height: 320px;
+        padding: 15px;
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    .member-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,60,0,0.2);
+        border-radius: 12px;
+        color: #eee;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .member-card:hover {
+        background: rgba(255, 60, 0, 0.15);
+        border-color: #ff3c00;
+        transform: translateX(5px);
+        box-shadow: 0 0 20px rgba(255, 60, 0, 0.4);
+    }
+
+    .avatar-wrapper { position: relative; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #ff3c00; }
+    
+    .status-dot { position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #000; }
+    .online { background: #00ff00; box-shadow: 0 0 8px #00ff00; }
+    /* Pulsing for online members */
+    .online::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        border-radius: 50%; background: #00ff00; animation: statusPulse 2s infinite;
+    }
+    @keyframes statusPulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+    .offline { background: #555; }
+
+    .username { font-weight: bold; font-size: 14px; color: #fff; }
+    .rating { font-size: 11px; color: #ffae00; }
+</style>
+</head>
+<body>
+
+<div id="mainContainer">
+    <div class="header">
+        <div class="live-dot"></div>
+        <span class="title-text">Latest Recruits</span>
+    </div>
+
+    <div id="scrollBox">
+        <div id="members">Loading...</div>
+    </div>
+</div>
+
+<script>
+    const club = "group-a162138be57d83c3500191b84a4b325d";
+    async function load(){
+        try {
+            const res = await fetch(`https://api.chess.com/pub/club/${club}/members`);
+            const data = await res.json();
+            let members = (data.weekly || []).sort((a,b)=>b.joined - a.joined).slice(0,8);
+            
+            const detailPromises = members.map(async (u) => {
+                const [p, s] = await Promise.all([
+                    fetch(`https://api.chess.com/pub/player/${u.username}`).then(r=>r.json()),
+                    fetch(`https://api.chess.com/pub/player/${u.username}/stats`).then(r=>r.json())
+                ]);
+                return { username: u.username, profile: p, stats: s };
+            });
+
+            const results = await Promise.all(detailPromises);
+            const container = document.getElementById("members");
+            container.innerHTML = results.map(p => `
+                <a href="https://www.chess.com/member/${p.username}" target="_blank" class="member-card">
+                    <div class="avatar-wrapper">
+                        <img src="${p.profile.avatar || 'https://www.chess.com/bundles/web/images/noavatar_l.84a92436.gif'}" class="avatar">
+                        <div class="status-dot ${p.profile.status === 'online' ? 'online' : 'offline'}"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; text-align:left;">
+                        <span class="username">${p.username}</span>
+                        <span class="rating">⚡ Rapid: ${p.stats.chess_rapid ? p.stats.chess_rapid.last.rating : '—'}</span>
+                    </div>
+                </a>
+            `).join('');
+        } catch(e) { document.getElementById("members").innerHTML = "Error."; }
+    }
+    load();
+</script>
+
+</body>
+</html>
